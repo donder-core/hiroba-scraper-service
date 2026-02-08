@@ -19,10 +19,11 @@ const (
 	tokenCookieName = "_token_v2"
 )
 
-type TokenHandler struct {
-	client *http.Client
-	logger *log.Logger
-	debug  bool
+type TokenService struct {
+	client       *http.Client
+	logger       *log.Logger
+	currentToken string
+	tokenMu      sync.RWMutex // Protects currentToken from concurrent access
 }
 
 type LoginResponse struct {
@@ -32,17 +33,12 @@ type LoginResponse struct {
 }
 
 var (
-	instance *TokenHandler
+	instance *TokenService
 	once     sync.Once
 )
 
-// GetInstance returns the singleton instance of TokenHandler with debug mode disabled
-func GetInstance() *TokenHandler {
-	return GetInstanceWithDebug(false)
-}
-
-// GetInstanceWithDebug returns the singleton instance of TokenHandler with configurable debug mode
-func GetInstanceWithDebug(debug bool) *TokenHandler {
+// GetInstance returns the singleton instance of TokenService
+func GetInstance() *TokenService {
 	once.Do(func() {
 		jar, err := cookiejar.New(nil)
 		if err != nil {
@@ -51,42 +47,29 @@ func GetInstanceWithDebug(debug bool) *TokenHandler {
 
 		logger := log.New(os.Stdout, "[AUTH] ", log.LstdFlags)
 
-		instance = &TokenHandler{
+		instance = &TokenService{
 			client: &http.Client{
 				Jar:           jar,
 				CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse },
 			},
 			logger: logger,
-			debug:  debug,
 		}
 	})
 	return instance
 }
 
-// SetDebug enables or disables debug logging
-func (th *TokenHandler) SetDebug(debug bool) {
-	th.debug = debug
-}
-
-// logDebug logs a message only if debug mode is enabled
-func (th *TokenHandler) logDebug(format string, v ...interface{}) {
-	if th.debug {
-		th.logger.Printf(format, v...)
-	}
-}
-
 // Authenticate performs the complete authentication flow and returns the token cookie value
-func (th *TokenHandler) Authenticate(username, password string) (string, error) {
-	th.logDebug("Step 1: Authenticating with Bandai Namco ID")
+func (th *TokenService) Authenticate(username, password string) (string, error) {
+	th.logger.Printf("Authenticating with Bandai Namco ID")
 	redirectURL := th.authenticateBandaiNamco(username, password)
 
-	th.logDebug("Step 2: Following OAuth2 redirects")
+	th.logger.Printf("Following OAuth2 redirects")
 	th.followOAuthRedirects(redirectURL)
 
-	th.logDebug("Step 3: Submitting login selection")
+	th.logger.Printf("Submitting login selection")
 	th.submitLoginSelection()
 
-	th.logDebug("Step 4: Verifying authentication")
+	th.logger.Printf("Verifying authentication")
 	if err := th.verifyAuthentication(); err != nil {
 		return "", err
 	}
@@ -96,16 +79,30 @@ func (th *TokenHandler) Authenticate(username, password string) (string, error) 
 		return "", fmt.Errorf("token cookie not found")
 	}
 
-	th.logDebug("Authentication completed successfully")
-	return token, nil
+	th.logger.Printf("Authentication completed successfully")
+	th.SetCurrentToken(token)
+	return th.GetCurrentToken(), nil
+}
+
+func (th *TokenService) GetCurrentToken() string {
+	th.tokenMu.RLock()
+	defer th.tokenMu.RUnlock()
+	return th.currentToken
+}
+
+func (th *TokenService) SetCurrentToken(token string) {
+	th.tokenMu.Lock()
+	defer th.tokenMu.Unlock()
+	th.currentToken = token
 }
 
 // GetClient returns the authenticated HTTP client
-func (th *TokenHandler) GetClient() *http.Client {
+func (th *TokenService) GetClient() *http.Client {
 	return th.client
 }
 
-func (th *TokenHandler) authenticateBandaiNamco(username, password string) string {
+func (th *TokenService) authenticateBandaiNamco(username, password string) string {
+	th.logger.Printf("Sending authentication request...")
 	formData := url.Values{}
 	formData.Set("client_id", "nbgi_taiko")
 	formData.Set("redirect_uri", "https://www.bandainamcoid.com/v2/oauth2/auth?back=v3&client_id=nbgi_taiko&scope=JpGroupAll&redirect_uri=https%3A%2F%2Fdonderhiroba.jp%2Flogin_process.php")
@@ -133,6 +130,8 @@ func (th *TokenHandler) authenticateBandaiNamco(username, password string) strin
 	}
 	defer resp.Body.Close()
 
+	th.logger.Printf("Received authentication response with status: %d", resp.StatusCode)
+
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatal(err)
@@ -151,10 +150,11 @@ func (th *TokenHandler) authenticateBandaiNamco(username, password string) strin
 		log.Fatal("No redirect URL in response")
 	}
 
+	th.logger.Printf("Authentication successful, redirect URL received")
 	return loginResp.Redirect
 }
 
-func (th *TokenHandler) followOAuthRedirects(startURL string) {
+func (th *TokenService) followOAuthRedirects(startURL string) {
 	currentURL := startURL
 
 	for i := 0; i < maxRedirects; i++ {
@@ -180,13 +180,14 @@ func (th *TokenHandler) followOAuthRedirects(startURL string) {
 		}
 
 		resp.Body.Close()
+		th.logger.Printf("Completed redirect chain after %d redirects", i+1)
 		return
 	}
 
 	log.Fatal("Too many redirects")
 }
 
-func (th *TokenHandler) submitLoginSelection() {
+func (th *TokenService) submitLoginSelection() {
 	selectData := strings.NewReader("id_pos=1&mode=exec")
 	req, err := http.NewRequest("POST", "https://donderhiroba.jp/login_select.php", selectData)
 	if err != nil {
@@ -207,7 +208,7 @@ func (th *TokenHandler) submitLoginSelection() {
 	io.Copy(io.Discard, resp.Body)
 }
 
-func (th *TokenHandler) verifyAuthentication() error {
+func (th *TokenService) verifyAuthentication() error {
 	req, err := http.NewRequest("GET", "https://donderhiroba.jp/index.php", nil)
 	if err != nil {
 		return err
@@ -229,15 +230,15 @@ func (th *TokenHandler) verifyAuthentication() error {
 
 	pageContent := string(bodyBytes)
 	if strings.Contains(pageContent, "logout") || strings.Contains(pageContent, "マイページ") {
-		th.logDebug("Authentication verification successful")
+		th.logger.Printf("Authentication verification successful")
 		return nil
 	}
 
-	th.logDebug("Authentication verification failed - login indicators not found")
+	th.logger.Printf("Authentication verification failed - login indicators not found")
 	return fmt.Errorf("authentication verification failed")
 }
 
-func (th *TokenHandler) getToken() string {
+func (th *TokenService) getToken() string {
 	dondonURL, err := url.Parse("https://donderhiroba.jp")
 	if err != nil {
 		return ""
