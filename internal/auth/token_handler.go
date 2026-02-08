@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	userAgent    = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36"
-	maxRedirects = 10
+	userAgent       = "Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Mobile Safari/537.36"
+	maxRedirects    = 3 // 3 redirects is enough for the login process
+	tokenCookieName = "_token_v2"
 )
 
 type TokenHandler struct {
@@ -74,7 +75,7 @@ func (th *TokenHandler) logDebug(format string, v ...interface{}) {
 	}
 }
 
-// Authenticate performs the complete authentication flow and returns the _token_v2 cookie value
+// Authenticate performs the complete authentication flow and returns the token cookie value
 func (th *TokenHandler) Authenticate(username, password string) (string, error) {
 	th.logDebug("Step 1: Authenticating with Bandai Namco ID")
 	redirectURL := th.authenticateBandaiNamco(username, password)
@@ -90,9 +91,9 @@ func (th *TokenHandler) Authenticate(username, password string) (string, error) 
 		return "", err
 	}
 
-	token := th.getTokenV2()
+	token := th.getToken()
 	if token == "" {
-		return "", fmt.Errorf("_token_v2 cookie not found")
+		return "", fmt.Errorf("token cookie not found")
 	}
 
 	th.logDebug("Authentication completed successfully")
@@ -236,7 +237,7 @@ func (th *TokenHandler) verifyAuthentication() error {
 	return fmt.Errorf("authentication verification failed")
 }
 
-func (th *TokenHandler) getTokenV2() string {
+func (th *TokenHandler) getToken() string {
 	dondonURL, err := url.Parse("https://donderhiroba.jp")
 	if err != nil {
 		return ""
@@ -244,7 +245,7 @@ func (th *TokenHandler) getTokenV2() string {
 
 	cookies := th.client.Jar.Cookies(dondonURL)
 	for _, cookie := range cookies {
-		if cookie.Name == "_token_v2" {
+		if cookie.Name == tokenCookieName {
 			return cookie.Value
 		}
 	}
