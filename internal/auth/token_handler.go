@@ -108,14 +108,14 @@ func (th *TokenHandler) GetClient() *http.Client {
 func (th *TokenHandler) authenticateBandaiNamco(username, password string) string {
 	formData := url.Values{}
 	formData.Set("client_id", "nbgi_taiko")
-	formData.Set("redirect_uri", "https://www.bandainamcoid.com/v2/oauth2/auth?back=v3&client_id=nbgi_taiko&scope=JpGroupAll&redirect_uri=https%3A%2F%2Fdonderhiroba.jp%2Flogin_process.php%3Finvite_code%3D%26abs_back_url%3D%26location_code%3D&text=")
+	formData.Set("redirect_uri", "https://www.bandainamcoid.com/v2/oauth2/auth?back=v3&client_id=nbgi_taiko&scope=JpGroupAll&redirect_uri=https%3A%2F%2Fdonderhiroba.jp%2Flogin_process.php")
 	formData.Set("backto", "")
 	formData.Set("customize_id", "")
 	formData.Set("login_id", username)
 	formData.Set("password", password)
 	formData.Set("retention", "1")
 	formData.Set("language", "en")
-	formData.Set("cookie", `{"language":"en","OptanonAlertBoxClosed":"2025-08-16T09:50:15.516Z","wwwglobal":"1","retention_tmp":"0","mnwlogindata":"6320b99de33868d61b02797f534b888866f83b6f93182efdb44f428dbb7327a8f304a977f3111cba557ddd0f990c457fc900061a9612a65c","retention":"0","OptanonConsent":"isGpcEnabled=0&datestamp=Fri+Feb+06+2026+10:02:55+GMT+1100+(Australian+Eastern+Daylight+Time)&version=202505.2.0&browserGpcFlag=0&isIABGlobal=false&hosts=&consentId=72d5c6b6-1f54-444e-b642-17ded39d6e42&interactionCount=2&isAnonUser=1&landingPath=NotLandingPage&groups=C0004:0,C0003:0,C0002:0,C0001:1&AwaitingReconsent=false&intType=3&geolocation=AU;VIC"}`)
+	formData.Set("cookie", `{"language":"en","retention":"0"}`)
 	formData.Set("prompt", "login")
 
 	req, err := http.NewRequest("POST", "https://account-api.bandainamcoid.com/v3/login/idpw", strings.NewReader(formData.Encode()))
