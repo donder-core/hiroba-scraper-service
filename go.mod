@@ -1,4 +1,4 @@
-module github.com/ap-rmit/scraper-don
+module github.com/donder-core/hiroba-scraper-service
 
 go 1.25.0
 

@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ap-rmit/scraper-don/internal/api"
-	"github.com/ap-rmit/scraper-don/internal/auth"
+	"github.com/donder-core/hiroba-scraper-service/internal/api"
+	"github.com/donder-core/hiroba-scraper-service/internal/auth"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"

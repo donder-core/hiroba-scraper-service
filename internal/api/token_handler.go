@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/ap-rmit/scraper-don/internal/auth"
+	"github.com/donder-core/hiroba-scraper-service/internal/auth"
 )
 
 type TokenHandler struct {
