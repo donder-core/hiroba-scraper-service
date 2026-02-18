@@ -11,6 +11,7 @@ import (
 
 	"github.com/donder-core/hiroba-scraper-service/internal/api"
 	"github.com/donder-core/hiroba-scraper-service/internal/auth"
+	"github.com/donder-core/hiroba-scraper-service/internal/scraper"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
@@ -68,6 +69,7 @@ func main() {
 	}()
 
 	tokenHandler := api.NewTokenHandler(tokenService)
+	scraper := scraper.NewHtmlScraper(tokenService.GetClient())
 
 	e := echo.New()
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
@@ -115,7 +117,7 @@ func main() {
 		},
 	}))
 
-	if err := api.SetupTokenRoutes(e, tokenHandler); err != nil {
+	if err := api.SetupRoutes(e, tokenHandler, scraper); err != nil {
 		e.Logger.Error("failed to setup routes", "error", err)
 		return
 	}
