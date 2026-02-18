@@ -11,6 +11,8 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/donder-core/hiroba-scraper-service/internal/auth/models"
 )
 
 const (
@@ -24,12 +26,6 @@ type TokenService struct {
 	logger       *log.Logger
 	currentToken string
 	tokenMu      sync.RWMutex // Protects currentToken from concurrent access
-}
-
-type LoginResponse struct {
-	Status   int    `json:"status"`
-	Redirect string `json:"redirect"`
-	Message  string `json:"message"`
 }
 
 var (
@@ -137,7 +133,7 @@ func (th *TokenService) authenticateBandaiNamco(username, password string) strin
 		log.Fatal(err)
 	}
 
-	var loginResp LoginResponse
+	var loginResp models.LoginResponse
 	if err := json.Unmarshal(bodyBytes, &loginResp); err != nil {
 		log.Fatalf("Failed to parse login response: %v", err)
 	}
