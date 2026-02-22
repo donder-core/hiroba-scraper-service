@@ -36,5 +36,11 @@ func SetupScraperRoutes(e *echo.Echo, scraperHandler *ScraperHandler) error {
 		}
 		return c.JSON(http.StatusOK, scoreDetail)
 	})
+	e.POST("/batch_score_detail", func(c *echo.Context) error {
+		return scraperHandler.BatchGetScoreDetail(c)
+	})
+	e.GET("/job_status", func(c *echo.Context) error {
+		return scraperHandler.GetJobStatus(c)
+	})
 	return nil
 }
