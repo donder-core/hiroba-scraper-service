@@ -72,6 +72,9 @@ func main() {
 	scraper := scraper.NewHtmlScraper(tokenService.GetClient())
 
 	e := echo.New()
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+	}))
 	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogLatency:       true,
 		LogRemoteIP:      false,
