@@ -5,3 +5,7 @@ debug:
 mod:
 	go mod tidy
 	go mod vendor
+compose:
+	docker compose -f docker-compose.yml up --build -d
+clean:
+	docker compose -f docker-compose.yml down -v --rmi local
