@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -31,6 +32,51 @@ func ParseScoreDetail(html string) (*models.ScoreDetail, error) {
 	}
 
 	return detail, nil
+}
+
+// ParseScoreSummary parses a genre score summary page and returns the set of
+// (song_no, level) pairs for which the user has a recorded score. Entries with
+// crown_button_none (unplayed) are excluded.
+func ParseScoreSummary(html string) ([]models.ScrapeTarget, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
+	if err != nil {
+		return nil, err
+	}
+
+	var targets []models.ScrapeTarget
+
+	doc.Find("#songList li.contentBox").Each(func(_ int, song *goquery.Selection) {
+		song.Find(".buttonList li a").Each(func(_ int, btn *goquery.Selection) {
+			imgSrc, exists := btn.Find("img").Attr("src")
+			if !exists || strings.Contains(imgSrc, "crown_button_none") {
+				return
+			}
+
+			href, exists := btn.Attr("href")
+			if !exists {
+				return
+			}
+
+			parsed, err := url.Parse(href)
+			if err != nil {
+				return
+			}
+			q := parsed.Query()
+
+			songNo, err := strconv.Atoi(q.Get("song_no"))
+			if err != nil {
+				return
+			}
+			level, err := strconv.Atoi(q.Get("level"))
+			if err != nil {
+				return
+			}
+
+			targets = append(targets, models.ScrapeTarget{SongNo: songNo, Level: level})
+		})
+	})
+
+	return targets, nil
 }
 
 func parseStatStr(sel *goquery.Selection, selector, suffix string) string {

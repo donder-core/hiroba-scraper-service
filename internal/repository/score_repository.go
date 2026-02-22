@@ -54,7 +54,7 @@ func (r *PostgresScoreRepository) UpsertScoreDetail(ctx context.Context, songNo,
 	return &result, nil
 }
 
-func (r *PostgresScoreRepository) BatchUpsertScoreDetails(ctx context.Context, level int, taikoNo string, records []models.ScoredRecord) error {
+func (r *PostgresScoreRepository) BatchUpsertScoreDetails(ctx context.Context, taikoNo string, records []models.ScoredRecord) error {
 	if len(records) == 0 {
 		return nil
 	}
@@ -72,7 +72,7 @@ func (r *PostgresScoreRepository) BatchUpsertScoreDetails(ctx context.Context, l
 			base+7, base+8, base+9, base+10, base+11, base+12,
 		)
 		args = append(args,
-			r.SongNo, level, taikoNo,
+			r.SongNo, r.Level, taikoNo,
 			r.Detail.CrownSrc, r.Detail.BestScoreIconSrc, r.Detail.Ranking,
 			r.Detail.HighScore, r.Detail.Good, r.Detail.Combo, r.Detail.OK, r.Detail.Drumroll, r.Detail.Bad,
 		)
@@ -99,7 +99,7 @@ ON CONFLICT (song_no, level, taiko_no) DO UPDATE SET
 
 	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("batch upsert score_detail (%d records, level=%d, taiko_no=%s): %w", len(records), level, taikoNo, err)
+		return fmt.Errorf("batch upsert score_detail (%d records, taiko_no=%s): %w", len(records), taikoNo, err)
 	}
 	return nil
 }

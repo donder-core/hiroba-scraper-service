@@ -59,6 +59,20 @@ func (sh *ScraperHandler) BatchGetScoreDetail(c *echo.Context) error {
 	})
 }
 
+func (sh *ScraperHandler) SmartBatchScrape(c *echo.Context) error {
+	taikoNo := c.QueryParam("taiko_no")
+	if taikoNo == "" {
+		return c.String(http.StatusBadRequest, "missing taiko_no")
+	}
+
+	jobID, startedAt := sh.scoreService.SmartBatchScrape(taikoNo)
+
+	return c.JSON(http.StatusAccepted, map[string]any{
+		"job_id":     jobID,
+		"started_at": startedAt,
+	})
+}
+
 func (sh *ScraperHandler) GetJobStatus(c *echo.Context) error {
 	jobID := c.QueryParam("job_id")
 	if jobID == "" {

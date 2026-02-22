@@ -26,6 +26,12 @@ type Job struct {
 	mu         sync.RWMutex
 }
 
+func (j *Job) setTotal(total int) {
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	j.Total = total
+}
+
 func (j *Job) incrementProgress(result *models.ScoreDetail, errMsg string) {
 	j.mu.Lock()
 	defer j.mu.Unlock()

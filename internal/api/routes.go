@@ -35,6 +35,9 @@ func SetupScraperRoutes(e *echo.Echo, scraperHandler *ScraperHandler) error {
 	e.POST("/batch_score_detail", func(c *echo.Context) error {
 		return scraperHandler.BatchGetScoreDetail(c)
 	})
+	e.POST("/smart_batch_score_detail", func(c *echo.Context) error {
+		return scraperHandler.SmartBatchScrape(c)
+	})
 	e.GET("/job_status", func(c *echo.Context) error {
 		return scraperHandler.GetJobStatus(c)
 	})
