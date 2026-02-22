@@ -29,7 +29,7 @@ func SetupTokenRoutes(e *echo.Echo, tokenHandler *TokenHandler) error {
 }
 
 func SetupScraperRoutes(e *echo.Echo, scraperHandler *ScraperHandler) error {
-	e.GET("/score_detail", func(c *echo.Context) error {
+	e.POST("/score_detail", func(c *echo.Context) error {
 		scoreDetail, err := scraperHandler.GetScoreDetail(c)
 		if err != nil {
 			return c.String(http.StatusInternalServerError, err.Error())
