@@ -14,8 +14,8 @@ func NewHtmlScraper(client *http.Client) *HtmlScraper {
 	return &HtmlScraper{client: client}
 }
 
-func (s *HtmlScraper) Scrape(songNo int, level int, taikoNo int, token string) (string, error) {
-	targeturl := fmt.Sprintf("https://donderhiroba.jp/score_detail.php?song_no=%d&level=%d&taiko_no=%d", songNo, level, taikoNo)
+func (s *HtmlScraper) Scrape(songNo int, level int, taikoNo string, token string) (string, error) {
+	targeturl := fmt.Sprintf("https://donderhiroba.jp/score_detail.php?song_no=%d&level=%d&taiko_no=%s", songNo, level, taikoNo)
 	req, err := http.NewRequest("GET", targeturl, nil)
 	if err != nil {
 		return "", err

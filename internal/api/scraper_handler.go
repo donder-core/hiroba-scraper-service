@@ -16,7 +16,7 @@ func NewScraperHandler(scoreService *service.ScoreService) *ScraperHandler {
 	return &ScraperHandler{scoreService: scoreService}
 }
 
-func (sh *ScraperHandler) GetScoreDetail(c *echo.Context) error {
+func (sh *ScraperHandler) ScrapeScoreDetail(c *echo.Context) error {
 	songNo, err := strconv.Atoi(c.QueryParam("song_no"))
 	if err != nil {
 		return c.String(http.StatusBadRequest, "invalid song_no")
@@ -27,12 +27,12 @@ func (sh *ScraperHandler) GetScoreDetail(c *echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid level")
 	}
 
-	taikoNo, err := strconv.Atoi(c.QueryParam("taiko_no"))
-	if err != nil {
-		return c.String(http.StatusBadRequest, "invalid taiko_no")
+	taikoNo := c.QueryParam("taiko_no")
+	if taikoNo == "" {
+		return c.String(http.StatusBadRequest, "missing taiko_no")
 	}
 
-	scoreDetail, err := sh.scoreService.GetScoreDetail(songNo, level, taikoNo)
+	scoreDetail, err := sh.scoreService.ScrapeScoreDetail(songNo, level, taikoNo)
 	if err != nil {
 		return c.String(http.StatusInternalServerError, err.Error())
 	}
@@ -46,9 +46,9 @@ func (sh *ScraperHandler) BatchGetScoreDetail(c *echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid level")
 	}
 
-	taikoNo, err := strconv.Atoi(c.QueryParam("taiko_no"))
-	if err != nil {
-		return c.String(http.StatusBadRequest, "invalid taiko_no")
+	taikoNo := c.QueryParam("taiko_no")
+	if taikoNo == "" {
+		return c.String(http.StatusBadRequest, "missing taiko_no")
 	}
 
 	jobID, startedAt := sh.scoreService.BatchGetScoreDetail(level, taikoNo)

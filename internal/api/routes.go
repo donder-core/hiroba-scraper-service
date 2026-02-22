@@ -29,8 +29,8 @@ func SetupTokenRoutes(e *echo.Echo, tokenHandler *TokenHandler) error {
 }
 
 func SetupScraperRoutes(e *echo.Echo, scraperHandler *ScraperHandler) error {
-	e.POST("/score_detail", func(c *echo.Context) error {
-		return scraperHandler.GetScoreDetail(c)
+	e.POST("/scrape_score_detail", func(c *echo.Context) error {
+		return scraperHandler.ScrapeScoreDetail(c)
 	})
 	e.POST("/batch_score_detail", func(c *echo.Context) error {
 		return scraperHandler.BatchGetScoreDetail(c)

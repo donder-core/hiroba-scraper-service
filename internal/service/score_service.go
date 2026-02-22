@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -17,24 +18,31 @@ type TokenProvider interface {
 }
 
 type Scraper interface {
-	Scrape(songNo, level, taikoNo int, token string) (string, error)
+	Scrape(songNo, level int, taikoNo string, token string) (string, error)
+}
+
+type ScoreRepository interface {
+	UpsertScoreDetail(ctx context.Context, songNo, level int, taikoNo string, detail *models.ScoreDetail) (*models.ScoreDetail, error)
+	BatchUpsertScoreDetails(ctx context.Context, level int, taikoNo string, records []models.ScoredRecord) error
 }
 
 type ScoreService struct {
 	scraper       Scraper
 	tokenProvider TokenProvider
+	repo          ScoreRepository
 	jobStore      *JobStore
 }
 
-func NewScoreService(scraper Scraper, tokenProvider TokenProvider) *ScoreService {
+func NewScoreService(scraper Scraper, tokenProvider TokenProvider, repo ScoreRepository) *ScoreService {
 	return &ScoreService{
 		scraper:       scraper,
 		tokenProvider: tokenProvider,
+		repo:          repo,
 		jobStore:      newJobStore(),
 	}
 }
 
-func (s *ScoreService) GetScoreDetail(songNo, level, taikoNo int) (*models.ScoreDetail, error) {
+func (s *ScoreService) ScrapeScoreDetail(songNo, level int, taikoNo string) (*models.ScoreDetail, error) {
 	token, err := s.tokenProvider.GetToken()
 	if err != nil {
 		return nil, err
@@ -45,10 +53,24 @@ func (s *ScoreService) GetScoreDetail(songNo, level, taikoNo int) (*models.Score
 		return nil, err
 	}
 
-	return parser.ParseScoreDetail(html)
+	detail, err := parser.ParseScoreDetail(html)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.repo != nil {
+		persisted, err := s.repo.UpsertScoreDetail(context.Background(), songNo, level, taikoNo, detail)
+		if err != nil {
+			slog.Warn("failed to persist score detail", "song_no", songNo, "level", level, "taiko_no", taikoNo, "error", err)
+		} else {
+			return persisted, nil
+		}
+	}
+
+	return detail, nil
 }
 
-func (s *ScoreService) BatchGetScoreDetail(level, taikoNo int) (string, time.Time) {
+func (s *ScoreService) BatchGetScoreDetail(level int, taikoNo string) (string, time.Time) {
 	songIds := naiveGetSongIds()
 	job := s.jobStore.CreateJob(len(songIds))
 
@@ -66,7 +88,12 @@ func (s *ScoreService) BatchGetScoreDetail(level, taikoNo int) (string, time.Tim
 		}
 		close(songCh)
 
-		var wg sync.WaitGroup
+		var (
+			wg sync.WaitGroup
+			mu sync.Mutex
+		)
+		records := make([]models.ScoredRecord, 0, len(songIds))
+
 		for range batchWorkerCount {
 			wg.Add(1)
 			go func() {
@@ -85,10 +112,20 @@ func (s *ScoreService) BatchGetScoreDetail(level, taikoNo int) (string, time.Tim
 					}
 
 					job.incrementProgress(scoreDetail, "")
+
+				mu.Lock()
+				records = append(records, models.ScoredRecord{SongNo: songNo, Detail: *scoreDetail})
+				mu.Unlock()
 				}
 			}()
 		}
 		wg.Wait()
+
+		if s.repo != nil && len(records) > 0 {
+			if err := s.repo.BatchUpsertScoreDetails(context.Background(), level, taikoNo, records); err != nil {
+				slog.Warn("batch upsert failed", "job_id", job.ID, "count", len(records), "error", err)
+			}
+		}
 
 		job.complete()
 
@@ -96,7 +133,7 @@ func (s *ScoreService) BatchGetScoreDetail(level, taikoNo int) (string, time.Tim
 		results := job.Results
 		job.mu.RUnlock()
 
-		slog.Info("batch job completed", "job_id", job.ID, "total_results", len(results), "results", results)
+		slog.Info("batch job completed", "job_id", job.ID, "total_results", len(results))
 	}()
 
 	return job.ID, job.StartedAt

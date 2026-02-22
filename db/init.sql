@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS score_detail (
     song_no             INT          NOT NULL,
     level               INT          NOT NULL,
-    taiko_no            INT          NOT NULL,
+    taiko_no            VARCHAR(50)  NOT NULL,
     crown_src           VARCHAR(255) NOT NULL DEFAULT '',
     best_score_icon_src VARCHAR(255) NOT NULL DEFAULT '',
     ranking             VARCHAR(50)  NOT NULL DEFAULT '',

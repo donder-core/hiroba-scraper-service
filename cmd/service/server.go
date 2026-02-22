@@ -11,6 +11,8 @@ import (
 
 	"github.com/donder-core/hiroba-scraper-service/internal/api"
 	"github.com/donder-core/hiroba-scraper-service/internal/auth"
+	"github.com/donder-core/hiroba-scraper-service/internal/db"
+	"github.com/donder-core/hiroba-scraper-service/internal/repository"
 	"github.com/donder-core/hiroba-scraper-service/internal/scraper"
 	"github.com/donder-core/hiroba-scraper-service/internal/service"
 	"github.com/joho/godotenv"
@@ -18,7 +20,7 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 )
 
-const reauthInterval = 2 * time.Minute
+const reauthInterval = 30 * time.Minute
 const port = ":6614"
 
 func init() {
@@ -69,9 +71,17 @@ func main() {
 		}
 	}()
 
+	database, err := db.Open()
+	if err != nil {
+		logger.Fatalf("failed to connect to database: %v", err)
+	}
+	defer database.Close()
+	logger.Println("Database connection established")
+
 	tokenHandler := api.NewTokenHandler(tokenService)
 	htmlScraper := scraper.NewHtmlScraper(tokenService.GetClient())
-	scoreService := service.NewScoreService(htmlScraper, tokenHandler)
+	scoreRepo := repository.NewPostgresScoreRepository(database)
+	scoreService := service.NewScoreService(htmlScraper, tokenHandler, scoreRepo)
 
 	e := echo.New()
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
