@@ -12,6 +12,7 @@ import (
 	"github.com/donder-core/hiroba-scraper-service/internal/api"
 	"github.com/donder-core/hiroba-scraper-service/internal/auth"
 	"github.com/donder-core/hiroba-scraper-service/internal/scraper"
+	"github.com/donder-core/hiroba-scraper-service/internal/service"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
@@ -69,7 +70,8 @@ func main() {
 	}()
 
 	tokenHandler := api.NewTokenHandler(tokenService)
-	scraper := scraper.NewHtmlScraper(tokenService.GetClient())
+	htmlScraper := scraper.NewHtmlScraper(tokenService.GetClient())
+	scoreService := service.NewScoreService(htmlScraper, tokenHandler)
 
 	e := echo.New()
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
@@ -120,7 +122,7 @@ func main() {
 		},
 	}))
 
-	if err := api.SetupRoutes(e, tokenHandler, scraper); err != nil {
+	if err := api.SetupRoutes(e, tokenHandler, scoreService); err != nil {
 		e.Logger.Error("failed to setup routes", "error", err)
 		return
 	}

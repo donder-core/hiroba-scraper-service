@@ -1,4 +1,4 @@
-package api
+package service
 
 import (
 	"fmt"
@@ -52,7 +52,6 @@ func (j *Job) fail() {
 	j.FinishedAt = time.Now()
 }
 
-// JobSnapshot returns a consistent read of job fields for status reporting.
 type JobSnapshot struct {
 	ID         string     `json:"job_id"`
 	Status     string     `json:"status"`
