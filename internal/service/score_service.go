@@ -25,6 +25,7 @@ type Scraper interface {
 type ScoreRepository interface {
 	UpsertScoreDetail(ctx context.Context, songNo, level int, taikoNo string, detail *models.ScoreDetail) (*models.ScoreDetail, error)
 	BatchUpsertScoreDetails(ctx context.Context, taikoNo string, records []models.ScoredRecord) error
+	GetScoresByTaikoNo(ctx context.Context, taikoNo string) ([]models.ScoredRecord, error)
 }
 
 type ScoreService struct {
@@ -217,6 +218,13 @@ func (s *ScoreService) scrapeTargets(job *Job, taikoNo, token string, targets []
 	wg.Wait()
 
 	return records
+}
+
+func (s *ScoreService) GetScoresByTaikoNo(ctx context.Context, taikoNo string) ([]models.ScoredRecord, error) {
+	if s.repo == nil {
+		return nil, fmt.Errorf("no repository configured")
+	}
+	return s.repo.GetScoresByTaikoNo(ctx, taikoNo)
 }
 
 func (s *ScoreService) GetJobStatus(jobID string) (*JobSnapshot, bool) {

@@ -14,6 +14,9 @@ func SetupRoutes(e *echo.Echo, tokenHandler *TokenHandler, scoreService *service
 	if err := SetupScraperRoutes(e, NewScraperHandler(scoreService)); err != nil {
 		return err
 	}
+	if err := SetupScoreRoutes(e, NewScoreHandler(scoreService)); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -40,6 +43,13 @@ func SetupScraperRoutes(e *echo.Echo, scraperHandler *ScraperHandler) error {
 	})
 	e.GET("/job_status", func(c *echo.Context) error {
 		return scraperHandler.GetJobStatus(c)
+	})
+	return nil
+}
+
+func SetupScoreRoutes(e *echo.Echo, scoreHandler *ScoreHandler) error {
+	e.GET("/score", func(c *echo.Context) error {
+		return scoreHandler.GetScores(c)
 	})
 	return nil
 }

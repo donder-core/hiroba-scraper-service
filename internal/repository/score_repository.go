@@ -103,3 +103,36 @@ ON CONFLICT (song_no, level, taiko_no) DO UPDATE SET
 	}
 	return nil
 }
+
+const getScoresByTaikoNoQuery = `
+SELECT song_no, level, crown_src, best_score_icon_src, ranking,
+       high_score, good, combo, ok, drumroll, bad
+FROM score_detail
+WHERE taiko_no = $1
+ORDER BY song_no, level`
+
+func (r *PostgresScoreRepository) GetScoresByTaikoNo(ctx context.Context, taikoNo string) ([]models.ScoredRecord, error) {
+	rows, err := r.db.QueryContext(ctx, getScoresByTaikoNoQuery, taikoNo)
+	if err != nil {
+		return nil, fmt.Errorf("get scores by taiko_no=%s: %w", taikoNo, err)
+	}
+	defer rows.Close()
+
+	var records []models.ScoredRecord
+	for rows.Next() {
+		var rec models.ScoredRecord
+		if err := rows.Scan(
+			&rec.SongNo, &rec.Level,
+			&rec.Detail.CrownSrc, &rec.Detail.BestScoreIconSrc, &rec.Detail.Ranking,
+			&rec.Detail.HighScore, &rec.Detail.Good, &rec.Detail.Combo, &rec.Detail.OK, &rec.Detail.Drumroll, &rec.Detail.Bad,
+		); err != nil {
+			return nil, fmt.Errorf("scan score_detail row (taiko_no=%s): %w", taikoNo, err)
+		}
+		records = append(records, rec)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate score_detail rows (taiko_no=%s): %w", taikoNo, err)
+	}
+
+	return records, nil
+}
