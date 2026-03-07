@@ -2,7 +2,7 @@ services:
   app:
     build: .
     ports:
-      - "80:80"
+      - "6614:6614"
     environment:
       - TAIKO_USERNAME=${TAIKO_USERNAME}
       - TAIKO_PASSWORD=${TAIKO_PASSWORD}
