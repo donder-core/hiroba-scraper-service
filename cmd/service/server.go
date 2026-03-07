@@ -21,7 +21,7 @@ import (
 )
 
 const reauthInterval = 30 * time.Minute
-const port = ":6614"
+const port = ":80"
 
 func init() {
 	_ = godotenv.Load()
