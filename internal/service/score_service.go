@@ -11,7 +11,7 @@ import (
 	"github.com/donder-core/hiroba-scraper-service/internal/parser/models"
 )
 
-const batchWorkerCount = 20
+const batchWorkerCount = 2000
 
 type TokenProvider interface {
 	GetToken() (string, error)
